@@ -1,0 +1,8 @@
+{
+    "editor.tabSize": 4,
+    "editor.formatOnSave": true,
+    "explorer.autoReveal": false,
+    "search.exclude": {
+        "**/node_modules": false
+    }
+}

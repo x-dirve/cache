@@ -269,6 +269,6 @@ function register(name: string, mod: any, type?: number) {
 export { register };
 
 // 注册内存类型
-register("memo", MemoCache, 2)
+register("memo", MemoCache, 2);
 
 export default Cache;

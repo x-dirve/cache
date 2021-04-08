@@ -51,6 +51,22 @@ function merge(target) {
     return merge.apply(void 0, [ target ].concat( sources ));
 }
 
+/**
+ * 是否是字符串
+ * @param  subject 待判断的数据
+ */
+function isString(subject) {
+    return is(subject, "string");
+}
+
+/**
+ * 是否是数字
+ * @param  subject 待判断的数据
+ */
+function isNumber(subject) {
+    return !isNaN(subject) && is(subject, "number");
+}
+
 var MemoCache = function MemoCache() {
     this.store = Object.create(null);
 };
@@ -66,13 +82,22 @@ MemoCache.prototype.removeItem = function removeItem (key) {
 };
 
 /**存储类型定义 */
-
-(function (CacheType) {
+var CacheType = {
     /**localStorage */
-    CacheType[CacheType["lStorage"] = 0] = "lStorage";
-    CacheType[CacheType["sStorage"] = 1] = "sStorage";
-    CacheType[CacheType["memo"] = 2] = "memo";
-})(exports.CacheType || (exports.CacheType = {}));
+    "lStorage": 0
+    /**sessionStorage */
+    ,
+    "sStorage": 1
+    /**内存 */
+    ,
+    "memo": 2
+};
+var CacheTypeMap = Object.keys(CacheType).reduce(function (sub, key) {
+    sub[CacheType[key]] = key;
+    return sub;
+}, Object.create(null));
+/**自行注册的缓存类型 */
+var RegCacheMod = {};
 /**缓存前缀键名 */
 var PREFIX = "__F_CACHE__";
 /**缓存堆键名 */
@@ -97,17 +122,20 @@ var Cache = function Cache(conf) {
     this.prefix = "" + PREFIX + (this.config.prefix) + "_";
     // 获取缓存类型
     switch (conf.type) {
-        case exports.CacheType.lStorage:
+        case CacheType.lStorage:
             this.store = localStorage;
             break;
-        case exports.CacheType.sStorage:
+        case CacheType.sStorage:
             this.store = sessionStorage;
-            break;
-        case exports.CacheType.memo:
-            this.store = new MemoCache();
             break;
         default:
-            this.store = sessionStorage;
+            var typeName = CacheTypeMap[conf.type];
+            if (typeName && RegCacheMod[typeName]) {
+                this.store = new RegCacheMod[typeName]();
+            }
+            else {
+                this.store = sessionStorage;
+            }
     }
     this.stackKey = "" + (this.prefix) + STACK_KEY;
     var stack = this.store.getItem(this.stackKey);
@@ -223,6 +251,31 @@ Cache.prototype.del = function del (key) {
 };
 
 Object.defineProperties( Cache.prototype, prototypeAccessors );
+/**获取当前的类型对应的类型值 */
+function getNowCacheType() {
+    return Object.keys(CacheType).map(function (name) { return CacheType[name]; });
+}
+/**
+ * 注册一个缓存类型
+ * @param name 缓存类型名称
+ * @param mod  自定义缓存模块
+ * @param type 缓存类型值，不传入时则在当前最大的取值上自动生成
+ */
+function register(name, mod, type) {
+    if (isString(name) && mod) {
+        if (!isNumber(type)) {
+            type = Math.max.apply(Math, getNowCacheType());
+            type += 1;
+        }
+        CacheTypeMap[type] = name;
+        CacheType[name] = type;
+        RegCacheMod[name] = mod;
+    }
+}
+// 注册内存类型
+register("memo", MemoCache, 2);
 
+exports.CacheType = CacheType;
 exports.default = Cache;
+exports.register = register;
 //# sourceMappingURL=index.js.map

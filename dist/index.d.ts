@@ -1,25 +1,22 @@
-/**存储类型定义 */
-declare enum CacheType {
-    /**localStorage */
-    lStorage 
-    /**sessionStorage */
-    = 0
-    /**sessionStorage */
-    ,
-    sStorage 
-    /**内存 */
-    = 1
-    /**内存 */
-    ,
-    memo = 2
+interface CacheType {
+    [type: string]: number;
 }
-export { CacheType };
+/**自定义缓存模块 */
+interface CacheMod {
+    /**获取数据 */
+    getItem<T = any>(key: string): T;
+    /**设置数据 */
+    setItem(key: string, value: any): any;
+    /**删除数据 */
+    removeItem(key: string): any;
+}
+export { CacheMod };
 /**
  * 缓存配置
  */
 interface CacheConf {
     /** 缓存类型 */
-    type?: CacheType;
+    type?: number;
     /** 全局过期时间 */
     expires?: number;
     /** 缓存key前缀*/
@@ -34,6 +31,9 @@ interface DataConf {
     /**缓存生效条件 */
     conditions?: object;
 }
+/**存储类型定义 */
+declare const CacheType: CacheType;
+export { CacheType };
 declare class Cache {
     /**实例配置 */
     config: CacheConf;
@@ -88,4 +88,12 @@ declare class Cache {
      */
     del(key: string): this;
 }
+/**
+ * 注册一个缓存类型
+ * @param name 缓存类型名称
+ * @param mod  自定义缓存模块
+ * @param type 缓存类型值，不传入时则在当前最大的取值上自动生成
+ */
+declare function register(name: string, mod: any, type?: number): void;
+export { register };
 export default Cache;

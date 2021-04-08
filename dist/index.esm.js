@@ -45,6 +45,22 @@ function merge(target) {
     return merge.apply(void 0, [ target ].concat( sources ));
 }
 
+/**
+ * 是否是字符串
+ * @param  subject 待判断的数据
+ */
+function isString(subject) {
+    return is(subject, "string");
+}
+
+/**
+ * 是否是数字
+ * @param  subject 待判断的数据
+ */
+function isNumber(subject) {
+    return !isNaN(subject) && is(subject, "number");
+}
+
 class MemoCache {
     constructor() {
         this.store = Object.create(null);
@@ -62,13 +78,22 @@ class MemoCache {
 }
 
 /**存储类型定义 */
-var CacheType;
-(function (CacheType) {
+const CacheType = {
     /**localStorage */
-    CacheType[CacheType["lStorage"] = 0] = "lStorage";
-    CacheType[CacheType["sStorage"] = 1] = "sStorage";
-    CacheType[CacheType["memo"] = 2] = "memo";
-})(CacheType || (CacheType = {}));
+    "lStorage": 0
+    /**sessionStorage */
+    ,
+    "sStorage": 1
+    /**内存 */
+    ,
+    "memo": 2
+};
+const CacheTypeMap = Object.keys(CacheType).reduce((sub, key) => {
+    sub[CacheType[key]] = key;
+    return sub;
+}, Object.create(null));
+/**自行注册的缓存类型 */
+const RegCacheMod = {};
 /**缓存前缀键名 */
 const PREFIX = "__F_CACHE__";
 /**缓存堆键名 */
@@ -98,11 +123,14 @@ class Cache {
             case CacheType.sStorage:
                 this.store = sessionStorage;
                 break;
-            case CacheType.memo:
-                this.store = new MemoCache();
-                break;
             default:
-                this.store = sessionStorage;
+                const typeName = CacheTypeMap[conf.type];
+                if (typeName && RegCacheMod[typeName]) {
+                    this.store = new RegCacheMod[typeName]();
+                }
+                else {
+                    this.store = sessionStorage;
+                }
         }
         this.stackKey = `${this.prefix}${STACK_KEY}`;
         var stack = this.store.getItem(this.stackKey);
@@ -215,7 +243,30 @@ class Cache {
         return this;
     }
 }
+/**获取当前的类型对应的类型值 */
+function getNowCacheType() {
+    return Object.keys(CacheType).map(name => CacheType[name]);
+}
+/**
+ * 注册一个缓存类型
+ * @param name 缓存类型名称
+ * @param mod  自定义缓存模块
+ * @param type 缓存类型值，不传入时则在当前最大的取值上自动生成
+ */
+function register(name, mod, type) {
+    if (isString(name) && mod) {
+        if (!isNumber(type)) {
+            type = Math.max.apply(Math, getNowCacheType());
+            type += 1;
+        }
+        CacheTypeMap[type] = name;
+        CacheType[name] = type;
+        RegCacheMod[name] = mod;
+    }
+}
+// 注册内存类型
+register("memo", MemoCache, 2);
 
 export default Cache;
-export { CacheType };
+export { CacheType, register };
 //# sourceMappingURL=index.esm.js.map

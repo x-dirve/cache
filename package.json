@@ -1,6 +1,6 @@
 {
     "name": "@x-drive/cache",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "页端缓存模块",
     "author": "digiaries <digiaries@hotmail.com>",
     "license": "MIT",

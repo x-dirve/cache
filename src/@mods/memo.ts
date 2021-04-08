@@ -1,14 +1,17 @@
-class MemoCache {
+import { CacheMod } from "../index";
+
+class MemoCache implements CacheMod {
     protected store: object = Object.create(null);
-    getItem<T>(key:string):T {
+
+    getItem<T = any>(key:string):T {
         return this.store[key];
     }
 
-    setItem(key:string, value:any):void {
+    setItem(key:string, value:any) {
         this.store[key] = value;
     }
 
-    removeItem(key:string):void {
+    removeItem(key:string) {
         this.store[key] = null;
         delete this.store[key];
     }

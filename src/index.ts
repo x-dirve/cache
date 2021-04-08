@@ -1,24 +1,29 @@
-import { merge } from "@x-drive/utils";
+import { isNumber, isString, merge } from "@x-drive/utils";
 import MemoCache from "./@mods/memo";
 
-/**存储类型定义 */
-enum CacheType {
-    /**localStorage */
-    lStorage
-    /**sessionStorage */
-    , sStorage
-    /**内存 */
-    , memo
-};
+interface CacheType {
+    [type: string]: number;
+}
 
-export { CacheType };
+/**自定义缓存模块 */
+interface CacheMod {
+    /**获取数据 */
+    getItem<T = any>(key: string): T;
+
+    /**设置数据 */
+    setItem(key: string, value: any): any;
+
+    /**删除数据 */
+    removeItem(key: string): any;
+}
+export { CacheMod };
 
 /**
  * 缓存配置
  */
 interface CacheConf {
     /** 缓存类型 */
-    type?: CacheType
+    type?: number
     /** 全局过期时间 */
     expires?: number
     /** 缓存key前缀*/
@@ -35,6 +40,30 @@ interface DataConf {
     /**缓存生效条件 */
     conditions?: object
 };
+
+
+/**存储类型定义 */
+const CacheType: CacheType = {
+    /**localStorage */
+    "lStorage": 0
+    /**sessionStorage */
+    , "sStorage": 1
+    /**内存 */
+    , "memo": 2
+};
+
+const CacheTypeMap = Object.keys(CacheType).reduce(
+    (sub, key) => {
+        sub[CacheType[key]] = key;
+        return sub;
+    }
+    , Object.create(null)
+);
+
+export { CacheType };
+
+/**自行注册的缓存类型 */
+const RegCacheMod = {};
 
 /**缓存前缀键名 */
 const PREFIX: string = "__F_CACHE__";
@@ -75,12 +104,15 @@ class Cache {
             case CacheType.sStorage:
                 this.store = sessionStorage;
                 break;
-            case CacheType.memo:
-                this.store = new MemoCache();
-                break;
             default:
-                this.store = sessionStorage;
+                const typeName = CacheTypeMap[conf.type];
+                if (typeName && RegCacheMod[typeName]) {
+                    this.store = new RegCacheMod[typeName]();
+                } else {
+                    this.store = sessionStorage;
+                }
         }
+
         this.stackKey = `${this.prefix}${STACK_KEY}`;
         var stack = this.store.getItem(this.stackKey);
         if (stack) {
@@ -211,4 +243,32 @@ class Cache {
         return this;
     }
 }
+
+/**获取当前的类型对应的类型值 */
+function getNowCacheType() {
+    return Object.keys(CacheType).map(name => CacheType[name]);
+}
+
+/**
+ * 注册一个缓存类型
+ * @param name 缓存类型名称
+ * @param mod  自定义缓存模块
+ * @param type 缓存类型值，不传入时则在当前最大的取值上自动生成
+ */
+function register(name: string, mod: any, type?: number) {
+    if (isString(name) && mod) {
+        if (!isNumber(type)) {
+            type = Math.max.apply(Math, getNowCacheType());
+            type += 1;
+        }
+        CacheTypeMap[type] = name;
+        CacheType[name] = type;
+        RegCacheMod[name] = mod;
+    }
+}
+export { register };
+
+// 注册内存类型
+register("memo", MemoCache, 2)
+
 export default Cache;

@@ -17,6 +17,14 @@ function isObject(subject) {
 }
 
 /**
+ * 是否 undefined
+ * @param  subject 待判断的数据
+ */
+function isUndefined(subject) {
+    return is(subject, "undefined");
+}
+
+/**
  * 合并
  * @param target  合并基准对象
  * @param sources 后续合并对象
@@ -122,6 +130,13 @@ class Cache {
                 break;
             case CacheType.sStorage:
                 this.store = sessionStorage;
+                break;
+            case CacheType.memo:
+                if (isUndefined(RegCacheMod.memo)) {
+                    // 注册内存类型
+                    register("memo", MemoCache, 2);
+                }
+                this.store = new RegCacheMod.memo();
                 break;
             default:
                 const typeName = CacheTypeMap[conf.type];
@@ -254,7 +269,7 @@ function getNowCacheType() {
  * @param type 缓存类型值，不传入时则在当前最大的取值上自动生成
  */
 function register(name, mod, type) {
-    if (isString(name) && mod) {
+    if (isString(name) && isUndefined(RegCacheMod[name]) && mod) {
         if (!isNumber(type)) {
             type = Math.max.apply(Math, getNowCacheType());
             type += 1;
@@ -264,8 +279,6 @@ function register(name, mod, type) {
         RegCacheMod[name] = mod;
     }
 }
-// 注册内存类型
-register("memo", MemoCache, 2);
 
 export default Cache;
 export { CacheType, register };

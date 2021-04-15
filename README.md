@@ -6,7 +6,7 @@
 - `type` 缓存类型，可直接传入类型值或者通过 `import {CacheType} from "@x-drive/cache"` 后使用 `CacheType` 中的名称指定，默认使用 `sessionStorage`
     - `0` localStorage
     - `1` sessionStorage
-    - `2` 内存
+    - `2` 内存。内存型的缓存在第一次被实例化的时候才会被注册到模块中，因此使用者可以在一开始的时候使用 `register` 注册自己的内存型缓存，默认内存缓存的取值是 `2`
 - `expires` 全局过期时间
 - `prefix` 缓存key前缀
 - `maxStack` 限制上限

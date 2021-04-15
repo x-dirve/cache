@@ -1,4 +1,4 @@
-import { isNumber, isString, merge } from "@x-drive/utils";
+import { isNumber, isString, isUndefined, merge } from "@x-drive/utils";
 import MemoCache from "./@mods/memo";
 
 interface CacheType {
@@ -63,7 +63,7 @@ const CacheTypeMap = Object.keys(CacheType).reduce(
 export { CacheType };
 
 /**自行注册的缓存类型 */
-const RegCacheMod = {};
+const RegCacheMod:{[name:string]: any} = {};
 
 /**缓存前缀键名 */
 const PREFIX: string = "__F_CACHE__";
@@ -100,10 +100,20 @@ class Cache {
         switch (conf.type) {
             case CacheType.lStorage:
                 this.store = localStorage;
-                break;
+            break;
+            
             case CacheType.sStorage:
                 this.store = sessionStorage;
-                break;
+            break;
+
+            case CacheType.memo:
+                if (isUndefined(RegCacheMod.memo)) {
+                    // 注册内存类型
+                    register("memo", MemoCache, 2);
+                }
+                this.store = new RegCacheMod.memo();
+            break;
+
             default:
                 const typeName = CacheTypeMap[conf.type];
                 if (typeName && RegCacheMod[typeName]) {
@@ -256,7 +266,7 @@ function getNowCacheType() {
  * @param type 缓存类型值，不传入时则在当前最大的取值上自动生成
  */
 function register(name: string, mod: any, type?: number) {
-    if (isString(name) && mod) {
+    if (isString(name) && isUndefined(RegCacheMod[name]) && mod) {
         if (!isNumber(type)) {
             type = Math.max.apply(Math, getNowCacheType());
             type += 1;
@@ -267,8 +277,5 @@ function register(name: string, mod: any, type?: number) {
     }
 }
 export { register };
-
-// 注册内存类型
-register("memo", MemoCache, 2);
 
 export default Cache;

@@ -29,6 +29,22 @@ function isUndefined(subject) {
 }
 
 /**
+ * 是否是函数
+ * @param  subject 待判断的数据
+ */
+function isFunction(subject) {
+    return is(subject, "function");
+}
+
+/**
+ * 是否是数组
+ * @param  subject 待判断的数据
+ */
+function isArray(subject) {
+    return Array.isArray(subject);
+}
+
+/**
  * 合并
  * @param target  合并基准对象
  * @param sources 后续合并对象
@@ -184,6 +200,83 @@ prototypeAccessors.isStackOOM.get = function () {
     return this.stack.length >= this.config.maxStack;
 };
 /**
+ * 通过 key 与生效条件判断数据是否可以被缓存
+ * @param conditions 生效条件
+ * @param key    存储 key
+ */
+Cache.prototype.checkConditions = function checkConditions (conditions, key) {
+    var _a;
+    var keyParts = (_a = key.match(Cache.CONDITION_REGEXP)) === null || _a === void 0 ? void 0 : _a[1];
+    if (keyParts && conditions) {
+        // 是对象，条件都是且，任何一条无效就会认为判定失败
+        if (isObject(conditions)) {
+            for (var n in conditions) {
+                if (conditions.hasOwnProperty(n)) {
+                    var condition = conditions[n];
+                    var re = false;
+                    switch (true) {
+                        // 条件为数组时表示或
+                        case isArray(condition):
+                            for (var i = 0; i < condition.length; i++) {
+                                if (keyParts.indexOf(condition[i]) !== -1) {
+                                    // 任何一条满足
+                                    re = true;
+                                    break;
+                                }
+                            }
+                            break;
+                        // 条件为对象时表示且
+                        case isObject(condition):
+                            for (var m in condition) {
+                                if (condition.hasOwnProperty(m)) {
+                                    var checkKey = m + "=" + (condition[m]);
+                                    if (keyParts.indexOf(checkKey) === -1) {
+                                        // 任何一条不满足
+                                        re = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            break;
+                        // 条件为函数时则以函数返回值为准
+                        case isFunction(condition):
+                            re = condition(keyParts, key);
+                            break;
+                        // 其他类型则默认用 kv 对进行匹配
+                        default:
+                            var defCheckKey = n + "=" + condition;
+                            if (keyParts.indexOf(defCheckKey) === -1) {
+                                re = false;
+                            }
+                    }
+                    if (re === false) {
+                        // 外部定义的数据结构是对象，所以只要有一个条件无效则认为判定失败
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+        // 是数组，任何一条成功即可
+        if (isArray(conditions)) {
+            for (var i$1 = 0; i$1 < conditions.length; i$1++) {
+                if (keyParts.indexOf(conditions[i$1]) !== -1) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        // 不是对象也不是数组则直接判断
+        if (!isObject(conditions) && !isArray(conditions)) {
+            return keyParts.indexOf(conditions) !== -1;
+        }
+        // 其他的不支持
+        return false;
+    }
+    // 条件不支持则全都认为成功
+    return true;
+};
+/**
  * 存储数据
  * @param key   数据键值
  * @param value 数据
@@ -194,14 +287,25 @@ prototypeAccessors.isStackOOM.get = function () {
  * // 存储数据
  * Cache.set("test", 123456)
  * Cache.set("test", 123456, {expires: 10})
+ * Cache.set("test@123", 123, {conditions: 123})
+ * Cache.set("test@123", 234, {conditions: [123, 234]})
+ * Cache.set("test@a=123", 123456, {conditions: {a:123}})
  * ```
  */
 Cache.prototype.set = function set (key, value, conf) {
     var datConf = merge({
         "expires": this.config.expires
     }, conf);
+    // 条件
+    if (datConf.conditions) {
+        var checkRe = this.checkConditions(datConf.conditions, key);
+        if (checkRe === false) {
+            return null;
+        }
+    }
+    // 有效期
     var expires = datConf.expires;
-    if (expires) {
+    if (isNumber(expires) && expires) {
         expires = Date.now() + (datConf.expires * 1000);
     }
     var innerKey = "" + (this.prefix) + key;
@@ -266,6 +370,8 @@ Cache.prototype.del = function del (key) {
 };
 
 Object.defineProperties( Cache.prototype, prototypeAccessors );
+/**生效条件特征 */
+Cache.CONDITION_REGEXP = /@([\w\,\s\=]+)$/;
 /**获取当前的类型对应的类型值 */
 function getNowCacheType() {
     return Object.keys(CacheType).map(function (name) { return CacheType[name]; });

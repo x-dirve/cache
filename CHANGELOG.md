@@ -1,3 +1,9 @@
+## v1.2.0
+
+### Feat
+- feat: 支持缓存生效条件 [9679e07](https://github.com/x-dirve/cache/commit/9679e073a74a2cf36724e55e33b3ca17dcea407e)
+- feat: 模块第一次被实例化时才注册内存缓存，以便使用者可以 注册自己的内存缓存 [ce0fe1b](https://github.com/x-dirve/cache/commit/ce0fe1bd318b70913fde2c3a1afb684669918f6d)
+
 ## v1.1.0
 
 ### Feat

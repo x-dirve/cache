@@ -29,7 +29,7 @@ interface DataConf {
     /**单条数据过期时间 */
     expires?: number;
     /**缓存生效条件 */
-    conditions?: object;
+    conditions?: any;
 }
 /**存储类型定义 */
 declare const CacheType: CacheType;
@@ -52,6 +52,14 @@ declare class Cache {
     get length(): number;
     /**当前存储是否已经超出上限 */
     get isStackOOM(): boolean;
+    /**生效条件特征 */
+    static CONDITION_REGEXP: RegExp;
+    /**
+     * 通过 key 与生效条件判断数据是否可以被缓存
+     * @param conditions 生效条件
+     * @param key        存储 key
+     */
+    private checkConditions;
     /**
      * 存储数据
      * @param key   数据键值
@@ -63,6 +71,9 @@ declare class Cache {
      * // 存储数据
      * Cache.set("test", 123456)
      * Cache.set("test", 123456, {expires: 10})
+     * Cache.set("test@123", 123, {conditions: 123})
+     * Cache.set("test@123", 234, {conditions: [123, 234]})
+     * Cache.set("test@a=123", 123456, {conditions: {a:123}})
      * ```
      */
     set(key: string, value: any, conf?: DataConf): this;

@@ -1,4 +1,4 @@
-import { isNumber, isString, isUndefined, merge } from "@x-drive/utils";
+import { isArray, isFunction, isNumber, isObject, isString, isUndefined, merge } from "@x-drive/utils";
 import MemoCache from "./@mods/memo";
 
 interface CacheType {
@@ -38,7 +38,7 @@ interface DataConf {
     expires?: number
 
     /**缓存生效条件 */
-    conditions?: object
+    conditions?: any
 };
 
 
@@ -157,6 +157,92 @@ class Cache {
         return this.stack.length >= this.config.maxStack;
     }
 
+    /**生效条件特征 */
+    static CONDITION_REGEXP = /@([\w\,\s\=]+)$/;
+
+    /**
+     * 通过 key 与生效条件判断数据是否可以被缓存
+     * @param conditions 生效条件
+     * @param key        存储 key
+     */
+    private checkConditions(conditions: any, key:string) {
+        const keyParts = key.match(Cache.CONDITION_REGEXP)?.[1];
+        if (keyParts && conditions) {
+            // 是对象，条件都是且，任何一条无效就会认为判定失败
+            if (isObject(conditions)) {
+                for (let n in conditions) {
+                    if (conditions.hasOwnProperty(n)) {
+                        const condition = conditions[n];
+                        let re = false;
+                        switch (true) {
+                            // 条件为数组时表示或
+                            case isArray(condition):
+                                for (let i = 0; i < condition.length; i++) {
+                                    if (keyParts.indexOf(condition[i]) !== -1) {
+                                        // 任何一条满足
+                                        re  = true;
+                                        break;
+                                    }
+                                }
+                            break;
+    
+                            // 条件为对象时表示且
+                            case isObject(condition):
+                                for (let m in condition) {
+                                    if (condition.hasOwnProperty(m)) {
+                                        let checkKey = `${m}=${condition[m]}`;
+                                        if (keyParts.indexOf(checkKey) === -1) {
+                                            // 任何一条不满足
+                                            re = false;
+                                            break;
+                                        }
+                                    }
+                                }
+                            break;
+    
+                            // 条件为函数时则以函数返回值为准
+                            case isFunction(condition):
+                                re = (condition as Function)(keyParts, key);
+                            break;
+    
+                            // 其他类型则默认用 kv 对进行匹配
+                            default:
+                                const defCheckKey = `${n}=${condition}`;
+                                if (keyParts.indexOf(defCheckKey) === -1) {
+                                    re = false;
+                                }
+                        }
+                        if (re === false) {
+                            // 外部定义的数据结构是对象，所以只要有一个条件无效则认为判定失败
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+
+            // 是数组，任何一条成功即可
+            if (isArray(conditions)) {
+                for (let i = 0; i < conditions.length; i++) {
+                    if (keyParts.indexOf(conditions[i]) !== -1) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            // 不是对象也不是数组则直接判断
+            if (!isObject(conditions) && !isArray(conditions)) {
+                return keyParts.indexOf(conditions) !== -1;
+            }
+
+            // 其他的不支持
+            return false;
+        }
+        // 条件不支持则全都认为成功
+        return true;
+    }
+
     /**
      * 存储数据
      * @param key   数据键值
@@ -168,6 +254,9 @@ class Cache {
      * // 存储数据
      * Cache.set("test", 123456)
      * Cache.set("test", 123456, {expires: 10})
+     * Cache.set("test@123", 123, {conditions: 123})
+     * Cache.set("test@123", 234, {conditions: [123, 234]})
+     * Cache.set("test@a=123", 123456, {conditions: {a:123}})
      * ```
      */
     set(key: string, value:any, conf?: DataConf) {
@@ -178,8 +267,17 @@ class Cache {
             , conf
         );
 
+        // 条件
+        if (datConf.conditions) {
+            const checkRe = this.checkConditions(datConf.conditions, key);
+            if (checkRe === false) {
+                return null;
+            }
+        }
+
+        // 有效期
         let expires = datConf.expires;
-        if (expires) {
+        if (isNumber(expires) && expires) {
             expires = Date.now() + (datConf.expires * 1000);
         }
 

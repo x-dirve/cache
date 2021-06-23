@@ -2,6 +2,16 @@ import { isArray, isFunction, isNumber, isObject, isString, isUndefined, merge }
 import MemoCache from "./@mods/memo";
 
 interface CacheType {
+    /**localStorage */
+    lStorage:0;
+
+    /**sessionStorage */
+    sStorage : 1;
+
+    /**内存 */
+    memo:2;
+
+    /**其他类型 */
     [type: string]: number;
 }
 
@@ -22,37 +32,43 @@ export { CacheMod };
  * 缓存配置
  */
 interface CacheConf {
-    /** 缓存类型 */
-    type?: number
+    /**
+     * 缓存类型
+     * 默认：0 localStorage, 1 sessionStorage, 2 内存, 使用者可以自己定义其他类型
+     */
+    type?: number;
+
     /** 全局过期时间 */
-    expires?: number
+    expires?: number;
+
     /** 缓存key前缀*/
-    prefix?: string
+    prefix?: string;
+
     /** 限制上限 */
-    maxStack?: number
+    maxStack?: number;
 };
 
 /**单条数据缓存配置 */
 interface DataConf {
     /**单条数据过期时间 */
-    expires?: number
+    expires?: number;
 
     /**缓存生效条件 */
-    conditions?: any
+    conditions?: any;
+
+    /**是否一次性数据 */
+    once?: boolean;
 };
 
 
 /**存储类型定义 */
 const CacheType: CacheType = {
-    /**localStorage */
     "lStorage": 0
-    /**sessionStorage */
     , "sStorage": 1
-    /**内存 */
     , "memo": 2
 };
 
-const CacheTypeMap = Object.keys(CacheType).reduce(
+const CacheTypeMap:Record<number, string> = Object.keys(CacheType).reduce(
     (sub, key) => {
         sub[CacheType[key]] = key;
         return sub;
@@ -263,6 +279,7 @@ class Cache {
         const datConf: DataConf = merge(
             {
                 "expires": this.config.expires
+                ,"once": false
             }
             , conf
         );
@@ -286,8 +303,9 @@ class Cache {
         this.store.setItem(
             innerKey
             , JSON.stringify({
-                value,
-                expires
+                value
+                ,expires
+                , "once": datConf.once
             })
         );
 
@@ -312,19 +330,20 @@ class Cache {
      * Cache.get("test")
      * ```
      */
-    get(key: string) {
+    get<T = any>(key: string) {
         const innerKey = `${this.prefix}${key}`;
         let item = this.store.getItem(innerKey);
         const now = Date.now();
         if (item) {
             item = JSON.parse(item);
             if (item.expires && now > item.expires) {
-                this.del(
-                    innerKey.slice(this.prefix.length)
-                );
+                this.del(key);
                 return null;
             } else {
-                return item.value;
+                if (item.once) {
+                    this.del(key);
+                }
+                return item.value as T;
             }
         }
         return null;
@@ -349,6 +368,24 @@ class Cache {
             this.syncStack();
         }
         return this;
+    }
+
+    /**
+     * 存储一条一次性消费的数据，配置中的 once 字段会被强制设置为 true
+     * @param key   数据键值
+     * @param value 数据
+     * @param conf  数据缓存配置
+     * @returns     模块实例对象
+     */
+    once(key: string, value: any, conf?: DataConf) {
+        if (isObject(conf)) {
+            conf.once = true;
+        } else {
+            conf = {
+                "once": true
+            };
+        }
+        return this.set(key, value, conf);
     }
 }
 

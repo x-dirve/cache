@@ -107,13 +107,8 @@ MemoCache.prototype.removeItem = function removeItem (key) {
 
 /**存储类型定义 */
 var CacheType = {
-    /**localStorage */
-    "lStorage": 0
-    /**sessionStorage */
-    ,
-    "sStorage": 1
-    /**内存 */
-    ,
+    "lStorage": 0,
+    "sStorage": 1,
     "memo": 2
 };
 var CacheTypeMap = Object.keys(CacheType).reduce(function (sub, key) {
@@ -294,7 +289,8 @@ Cache.prototype.checkConditions = function checkConditions (conditions, key) {
  */
 Cache.prototype.set = function set (key, value, conf) {
     var datConf = merge({
-        "expires": this.config.expires
+        "expires": this.config.expires,
+        "once": false
     }, conf);
     // 条件
     if (datConf.conditions) {
@@ -311,7 +307,8 @@ Cache.prototype.set = function set (key, value, conf) {
     var innerKey = "" + (this.prefix) + key;
     this.store.setItem(innerKey, JSON.stringify({
         value: value,
-        expires: expires
+        expires: expires,
+        "once": datConf.once
     }));
     var index = this.stack.indexOf(innerKey);
     if (index === -1) {
@@ -339,10 +336,13 @@ Cache.prototype.get = function get (key) {
     if (item) {
         item = JSON.parse(item);
         if (item.expires && now > item.expires) {
-            this.del(innerKey.slice(this.prefix.length));
+            this.del(key);
             return null;
         }
         else {
+            if (item.once) {
+                this.del(key);
+            }
             return item.value;
         }
     }
@@ -367,6 +367,24 @@ Cache.prototype.del = function del (key) {
         this.syncStack();
     }
     return this;
+};
+/**
+ * 存储一条一次性消费的数据，配置中的 once 字段会被强制设置为 true
+ * @param key   数据键值
+ * @param value 数据
+ * @param conf  数据缓存配置
+ * @returns 模块实例对象
+ */
+Cache.prototype.once = function once (key, value, conf) {
+    if (isObject(conf)) {
+        conf.once = true;
+    }
+    else {
+        conf = {
+            "once": true
+        };
+    }
+    return this.set(key, value, conf);
 };
 
 Object.defineProperties( Cache.prototype, prototypeAccessors );

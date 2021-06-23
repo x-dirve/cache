@@ -103,13 +103,8 @@ class MemoCache {
 
 /**存储类型定义 */
 const CacheType = {
-    /**localStorage */
-    "lStorage": 0
-    /**sessionStorage */
-    ,
-    "sStorage": 1
-    /**内存 */
-    ,
+    "lStorage": 0,
+    "sStorage": 1,
     "memo": 2
 };
 const CacheTypeMap = Object.keys(CacheType).reduce((sub, key) => {
@@ -287,7 +282,8 @@ class Cache {
      */
     set(key, value, conf) {
         const datConf = merge({
-            "expires": this.config.expires
+            "expires": this.config.expires,
+            "once": false
         }, conf);
         // 条件
         if (datConf.conditions) {
@@ -304,7 +300,8 @@ class Cache {
         const innerKey = `${this.prefix}${key}`;
         this.store.setItem(innerKey, JSON.stringify({
             value,
-            expires
+            expires,
+            "once": datConf.once
         }));
         const index = this.stack.indexOf(innerKey);
         if (index === -1) {
@@ -332,10 +329,13 @@ class Cache {
         if (item) {
             item = JSON.parse(item);
             if (item.expires && now > item.expires) {
-                this.del(innerKey.slice(this.prefix.length));
+                this.del(key);
                 return null;
             }
             else {
+                if (item.once) {
+                    this.del(key);
+                }
                 return item.value;
             }
         }
@@ -360,6 +360,24 @@ class Cache {
             this.syncStack();
         }
         return this;
+    }
+    /**
+     * 存储一条一次性消费的数据，配置中的 once 字段会被强制设置为 true
+     * @param key   数据键值
+     * @param value 数据
+     * @param conf  数据缓存配置
+     * @returns     模块实例对象
+     */
+    once(key, value, conf) {
+        if (isObject(conf)) {
+            conf.once = true;
+        }
+        else {
+            conf = {
+                "once": true
+            };
+        }
+        return this.set(key, value, conf);
     }
 }
 /**生效条件特征 */

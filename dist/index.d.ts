@@ -1,4 +1,10 @@
 interface CacheType {
+    /**localStorage */
+    lStorage: 0;
+    /**sessionStorage */
+    sStorage: 1;
+    /**内存 */
+    memo: 2;
     [type: string]: number;
 }
 /**自定义缓存模块 */
@@ -15,7 +21,10 @@ export { CacheMod };
  * 缓存配置
  */
 interface CacheConf {
-    /** 缓存类型 */
+    /**
+     * 缓存类型
+     * 默认：0 localStorage, 1 sessionStorage, 2 内存, 使用者可以自己定义其他类型
+     */
     type?: number;
     /** 全局过期时间 */
     expires?: number;
@@ -30,6 +39,8 @@ interface DataConf {
     expires?: number;
     /**缓存生效条件 */
     conditions?: any;
+    /**是否一次性数据 */
+    once?: boolean;
 }
 /**存储类型定义 */
 declare const CacheType: CacheType;
@@ -86,7 +97,7 @@ declare class Cache {
      * Cache.get("test")
      * ```
      */
-    get(key: string): any;
+    get<T = any>(key: string): T;
     /**
      * 删除已经存储的数据
      * @param   key 存储数据的键值
@@ -98,6 +109,14 @@ declare class Cache {
      * ```
      */
     del(key: string): this;
+    /**
+     * 存储一条一次性消费的数据，配置中的 once 字段会被强制设置为 true
+     * @param key   数据键值
+     * @param value 数据
+     * @param conf  数据缓存配置
+     * @returns     模块实例对象
+     */
+    once(key: string, value: any, conf?: DataConf): this;
 }
 /**
  * 注册一个缓存类型

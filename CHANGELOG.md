@@ -1,3 +1,8 @@
+## v1.2.1
+
+### Feat
+- feat: 增加只生效一次的方法 once ，补充 type 定义 [d31ca0e](https://github.com/x-dirve/cache/commit/d31ca0e31708bfe613ca138c438bc7a4e4c4d3d9)
+
 ## v1.2.0
 
 ### Feat

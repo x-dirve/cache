@@ -1,3 +1,8 @@
+## v1.3.0
+
+### Feat
+- feat: 新增判断数据是否存在方法 has，整理过期数据方法 tidy; 升级 rollup 及相关依赖; 仓库不再存储编译产物目录 dist [9b3aae9](https://github.com/x-dirve/cache/commit/9b3aae91dde3d1f97f3ad978afcd7bacee26eacd)
+
 ## v1.2.1
 
 ### Feat

@@ -10,27 +10,25 @@ const cwd = __dirname;
 
 const baseConfig = {
     "input": join(cwd, "src/index.ts")
-    ,"output": [
-        {
-            "file": join(cwd, "dist/index.js")
-            ,"format": "cjs"
-            ,"sourcemap": true
-            ,"exports": "named"
-        }
-    ]
-    ,"plugins": [
+    , "output": {
+        "file": join(cwd, "dist/index.js")
+        , "format": "cjs"
+        , "sourcemap": true
+        , "exports": "named"
+    }
+    , "plugins": [
         resolve({
             preferBuiltins: false
         })
-        ,cjs()
-        ,babel({
+        , cjs()
+        , babel({
             "babelrc": false
-            ,"presets": [
+            , "presets": [
                 ["@babel/preset-env", {
                     modules: false
                 }]
             ]
-            ,"plugins": [
+            , "plugins": [
                 [
                     "import"
                     , {
@@ -44,25 +42,25 @@ const baseConfig = {
             , "include": "node_modules/@x-drive"
 
         })
-        ,typescript()
-        ,buble()
+        , typescript()
+        , buble()
     ]
 }
 const esmConfig = Object.assign({}, baseConfig, {
     "output": Object.assign({}, baseConfig.output, {
         "sourcemap": true
-        ,"format": "es"
-        ,"file": join(cwd, "dist/index.esm.js")
+        , "format": "es"
+        , "file": join(cwd, "dist/index.esm.js")
     }),
     "plugins": [
         babel({
             "babelrc": false
-            ,"presets": [
+            , "presets": [
                 ["@babel/preset-env", {
                     "modules": false
                 }]
             ]
-            ,"plugins": [
+            , "plugins": [
                 [
                     "import"
                     , {
@@ -76,7 +74,7 @@ const esmConfig = Object.assign({}, baseConfig, {
             , "include": "node_modules/@x-drive"
 
         })
-        ,alias({
+        , alias({
             "entries": [
                 {
                     "find": "@x-drive/utils",
@@ -84,7 +82,7 @@ const esmConfig = Object.assign({}, baseConfig, {
                 }
             ]
         })
-        ,typescript()
+        , typescript()
     ]
 })
 

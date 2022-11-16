@@ -3,13 +3,13 @@ import MemoCache from "./@mods/memo";
 
 interface CacheType {
     /**localStorage */
-    lStorage:0;
+    lStorage: 0;
 
     /**sessionStorage */
-    sStorage : 1;
+    sStorage: 1;
 
     /**内存 */
-    memo:2;
+    memo: 2;
 
     /**其他类型 */
     [type: string]: number;
@@ -68,7 +68,7 @@ const CacheType: CacheType = {
     , "memo": 2
 };
 
-const CacheTypeMap:Record<number, string> = Object.keys(CacheType).reduce(
+const CacheTypeMap: Record<number, string> = Object.keys(CacheType).reduce(
     (sub, key) => {
         sub[CacheType[key]] = key;
         return sub;
@@ -79,7 +79,7 @@ const CacheTypeMap:Record<number, string> = Object.keys(CacheType).reduce(
 export { CacheType };
 
 /**自行注册的缓存类型 */
-const RegCacheMod:{[name:string]: any} = {};
+const RegCacheMod: { [name: string]: any } = {};
 
 /**缓存前缀键名 */
 const PREFIX: string = "__F_CACHE__";
@@ -116,11 +116,11 @@ class Cache {
         switch (conf.type) {
             case CacheType.lStorage:
                 this.store = localStorage;
-            break;
-            
+                break;
+
             case CacheType.sStorage:
                 this.store = sessionStorage;
-            break;
+                break;
 
             case CacheType.memo:
                 if (isUndefined(RegCacheMod.memo)) {
@@ -128,7 +128,7 @@ class Cache {
                     register("memo", MemoCache, 2);
                 }
                 this.store = new RegCacheMod.memo();
-            break;
+                break;
 
             default:
                 const typeName = CacheTypeMap[conf.type];
@@ -164,12 +164,12 @@ class Cache {
     }
 
     /**当前缓存类型存储的数据数量 */
-    get length(): number {
+    get length() {
         return this.stack.length;
     }
 
     /**当前存储是否已经超出上限 */
-    get isStackOOM(): boolean {
+    get isStackOOM() {
         return this.stack.length >= this.config.maxStack;
     }
 
@@ -181,7 +181,7 @@ class Cache {
      * @param conditions 生效条件
      * @param key        存储 key
      */
-    private checkConditions(conditions: any, key:string) {
+    private checkConditions(conditions: any, key: string) {
         const keyParts = key.match(Cache.CONDITION_REGEXP)?.[1];
         if (keyParts && conditions) {
             // 是对象，条件都是且，任何一条无效就会认为判定失败
@@ -196,12 +196,12 @@ class Cache {
                                 for (let i = 0; i < condition.length; i++) {
                                     if (keyParts.indexOf(condition[i]) !== -1) {
                                         // 任何一条满足
-                                        re  = true;
+                                        re = true;
                                         break;
                                     }
                                 }
-                            break;
-    
+                                break;
+
                             // 条件为对象时表示且
                             case isObject(condition):
                                 for (let m in condition) {
@@ -214,13 +214,13 @@ class Cache {
                                         }
                                     }
                                 }
-                            break;
-    
+                                break;
+
                             // 条件为函数时则以函数返回值为准
                             case isFunction(condition):
                                 re = (condition as Function)(keyParts, key);
-                            break;
-    
+                                break;
+
                             // 其他类型则默认用 kv 对进行匹配
                             default:
                                 const defCheckKey = `${n}=${condition}`;
@@ -275,11 +275,11 @@ class Cache {
      * Cache.set("test@a=123", 123456, {conditions: {a:123}})
      * ```
      */
-    set(key: string, value:any, conf?: DataConf) {
+    set(key: string, value: any, conf?: DataConf) {
         const datConf: DataConf = merge(
             {
                 "expires": this.config.expires
-                ,"once": false
+                , "once": false
             }
             , conf
         );
@@ -304,7 +304,7 @@ class Cache {
             innerKey
             , JSON.stringify({
                 value
-                ,expires
+                , expires
                 , "once": datConf.once
             })
         );
@@ -331,17 +331,24 @@ class Cache {
      * ```
      */
     get<T = any>(key: string) {
-        const innerKey = `${this.prefix}${key}`;
-        let item = this.store.getItem(innerKey);
+        return this.innerGet<T>(`${this.prefix}${key}`);
+    }
+
+    /**
+     * 获取存储的数据
+     * @param key 加了前缀的存储数据的键值
+     */
+    private innerGet<T = any>(key: string) {
+        let item = this.store.getItem(key);
         const now = Date.now();
         if (item) {
             item = JSON.parse(item);
             if (item.expires && now > item.expires) {
-                this.del(key);
+                this.innerDel(key);
                 return null;
             } else {
                 if (item.once) {
-                    this.del(key);
+                    this.innerDel(key);
                 }
                 return item.value as T;
             }
@@ -360,10 +367,18 @@ class Cache {
      * ```
      */
     del(key: string) {
-        const innerKey = `${this.prefix}${key}`;
-        const index = this.stack.indexOf(innerKey);
+        return this.innerDel(`${this.prefix}${key}`);
+    }
+
+    /**
+     * 删除已经存储的数据
+     * @param   key 加了前缀的存储数据的键值
+     * @returns     模块实例对象
+     */
+    private innerDel(key: string) {
+        const index = this.stack.indexOf(key);
         if (index !== -1) {
-            this.store.removeItem(innerKey);
+            this.store.removeItem(key);
             this.stack.splice(index, 1);
             this.syncStack();
         }
@@ -386,6 +401,34 @@ class Cache {
             };
         }
         return this.set(key, value, conf);
+    }
+
+    /**是否包含指定数据 */
+    has(key: string, validity: boolean = false) {
+        if (validity) {
+            let item = this.get(key);
+            return Boolean(item);
+        }
+        const innerKey = `${this.prefix}${key}`;
+        const index = this.stack.indexOf(innerKey);
+        return index !== -1;
+    }
+
+    /**清理失效缓存 */
+    tidy() {
+        if (isArray(this.stack) && this.stack.length) {
+            try {
+                const vStack = {};
+                for (let i = 0; i < this.stack.length; i++) {
+                    const re = this.innerGet(this.stack[i]);
+                    if (re) {
+                        vStack[this.stack[i]] = true;
+                    }
+                }
+                this.stack = this.stack.filter(key => vStack[key]);
+                this.syncStack();
+            } catch (e) { }
+        }
     }
 }
 

@@ -44,6 +44,38 @@ Cache.get("test");
 Cache.del("test");
 ```
 
+### 存储一条一次性消费的数据
+**once(key: string, value: any, conf?: DataConf): this;**
+
+配置中的 once 字段会被强制设置为 true
+
+- `key` 数据键值
+- `value` 数据
+- `conf` 数据缓存配置
+    - `expires` 单条数据过期时间
+    - `conditions` 缓存生效条件
+
+```ts
+Cache.once("test", 123456);
+```
+
+### 是否包含指定数据
+**has(key: string, validity: boolean = false): boolean;**
+
+- `key` 存储数据的键值
+- `validity` 是否进行数据有效性校验
+
+```ts
+Cache.has("test");
+```
+
+### 删除已经存储的数据
+**tidy(): this;**
+
+```ts
+Cache.tidy();
+```
+
 ## 注册缓存模块
 模块提供了 `register` 方法用于注册新的缓存模块
 ```ts

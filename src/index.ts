@@ -403,7 +403,11 @@ class Cache {
         return this.set(key, value, conf);
     }
 
-    /**是否包含指定数据 */
+    /**
+     * 是否包含指定数据
+     * @param key      数据键值
+     * @param validity 是否进行数据有效性校验
+     */
     has(key: string, validity: boolean = false) {
         if (validity) {
             let item = this.get(key);
@@ -429,6 +433,7 @@ class Cache {
                 this.syncStack();
             } catch (e) { }
         }
+        return this;
     }
 }
 
